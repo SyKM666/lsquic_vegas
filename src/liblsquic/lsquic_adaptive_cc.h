@@ -9,11 +9,12 @@
 
 #ifndef LSQUIC_ADAPTIVE_CC_H
 #define LSQUIC_ADAPTIVE_CC_H 1
-
+#include "lsquic_vegas.h"
 struct adaptive_cc
 {
     struct lsquic_cubic     acc_cubic;
     struct lsquic_bbr       acc_bbr;
+    struct lsquic_vegas       acc_vegas;
     enum {
         ACC_CUBIC = 1,  /* If set, use Cubic; otherwise, use BBR */
     }                       acc_flags;

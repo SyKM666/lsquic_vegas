@@ -52,6 +52,7 @@
 #include "lsquic_frab_list.h"
 #include "lsquic_qdec_hdl.h"
 #include "lsquic_crand.h"
+#include "lsquic_vegas.h"
 
 #define LSQUIC_LOGGER_MODULE LSQLM_SENDCTL
 #define LSQUIC_LOG_CONN_ID lsquic_conn_log_cid(ctl->sc_conn_pub->lconn)
@@ -392,7 +393,9 @@ lsquic_send_ctl_init (lsquic_send_ctl_t *ctl, struct lsquic_alarmset *alset,
     if (!(ctl->sc_conn_pub->lconn->cn_flags & LSCONN_SERVER))
         ctl->sc_senhist.sh_last_sent = ctl->sc_cur_packno;
 #endif
-    switch (enpub->enp_settings.es_cc_algo)
+	ctl->sc_ci = &lsquic_cong_vegas_if;
+        ctl->sc_cong_ctl = &ctl->sc_adaptive_cc.acc_vegas;
+  /*  switch (enpub->enp_settings.es_cc_algo)
     {
     case 1:
         ctl->sc_ci = &lsquic_cong_cubic_if;
@@ -408,7 +411,11 @@ lsquic_send_ctl_init (lsquic_send_ctl_t *ctl, struct lsquic_alarmset *alset,
         ctl->sc_cong_ctl = &ctl->sc_adaptive_cc;
         break;
     }
+    Sunyu  
+    */
     ctl->sc_ci->cci_init(CGP(ctl), conn_pub, ctl->sc_retx_frames);
+    
+    
     if (ctl->sc_flags & SC_PACE)
         lsquic_pacer_init(&ctl->sc_pacer, conn_pub->lconn,
         /* TODO: conn_pub has a pointer to enpub: drop third argument */
@@ -1606,7 +1613,7 @@ lsquic_send_ctl_cleanup (lsquic_send_ctl_t *ctl)
         send_ctl_destroy_packet(ctl, packet_out);
     }
     assert(0 == ctl->sc_n_scheduled);
-    //assert(0 == ctl->sc_bytes_scheduled);
+    assert(0 == ctl->sc_bytes_scheduled);
     for (pns = PNS_INIT; pns < N_PNS; ++pns)
         while ((packet_out = TAILQ_FIRST(&ctl->sc_unacked_packets[pns])))
         {
