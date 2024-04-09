@@ -55,12 +55,12 @@ vegas_reset (struct lsquic_vegas *vegas)
     //vegas->cu_tcp_cwnd      = 32 * TCP_MSS;
     /*  还有一些参数不知应在此处初始化还是在INIT函数里初始化  */
 }
-uint64_t min(uint64_t a, uint64_t b)
-{
-    if(a > b)
-        return b;
-    return a;
-}
+// uint64_t min(uint64_t a, uint64_t b)
+// {
+//     if(a > b)
+//         return b;
+//     return a;
+// }
 
 static void lsquic_vegas_init(void* cong_ctl, const struct lsquic_conn_public *conn_pub, 
                                                         enum quic_ft_bit UNUSED_retx_frames)                                             
@@ -150,7 +150,7 @@ lsquic_vegas_ack (void *cong_ctl, struct lsquic_packet_out *packet_out,
 {
     struct lsquic_vegas *const vegas = cong_ctl;
     lsquic_time_t rtt,min_rtt;
-    uint64_t ack_p_num = 0; // 这一个ack ack的数据包数量
+    //uint64_t ack_p_num = 0; // 这一个ack ack的数据包数量
     rtt = now_time - packet_out->po_sent; // 这个ACK对应的RTT 
     LSQ_DEBUG("%s(vegas, %"PRIu64", %"PRIu64", %d, %u)", __func__, now_time, rtt,
                                                         app_limited, n_bytes);
@@ -159,19 +159,19 @@ lsquic_vegas_ack (void *cong_ctl, struct lsquic_packet_out *packet_out,
     vegas->BaseRTT = vegas->ve_rtt_stats->min_rtt; //更新整个连接的最小RTT值
     //vegas->BaseRTT = min(rtt,vegas->BaseRTT);
     
-    ack_p_num = packet_out->po_ack2ed - vegas->last_acked_p_no;
+    //ack_p_num = packet_out->po_ack2ed - vegas->last_acked_p_no;
     vegas->last_acked_p_no = packet_out->po_ack2ed;
     lsquic_packno_t this_ack_to_packno = packet_out->po_ack2ed; // ack回复的packet编号
-    FILE *f= fopen("/home/sy/test/test.txt","a");
+    //FILE *f= fopen("/home/sy/test/test.txt","a");
 
     //fprintf(f, "Vegas this ackpack is to ack pack %llu\n",  this_ack_to_packno);
-    fprintf(f, "Vegas newest packno sent is %llu\n",  vegas->last_packno);
-    fprintf(f, "此编号空间 %llu\n", lsquic_packet_out_pns(packet_out));
+    //fprintf(f, "Vegas newest packno sent is %llu\n",  vegas->last_packno);
+    //fprintf(f, "此编号空间 %llu\n", lsquic_packet_out_pns(packet_out));
     //fprintf(f, "Vegas  Min_RTT_last_RTT is %llu\n",  vegas->Min_RTT_last_RTT);
     //fprintf(f, "Vegas  this rtt is %llu\n",  rtt);
-    fprintf(f, "Vegas this pack_no is %llu\n",  packet_out->po_packno);
-    fprintf(f, "Vegas this pack_no is to ack %llu\n",  packet_out->po_ack2ed);\
-    fclose(f);
+    //fprintf(f, "Vegas this pack_no is %llu\n",  packet_out->po_packno);
+    //fprintf(f, "Vegas this pack_no is to ack %llu\n",  packet_out->po_ack2ed);\
+    //fclose(f);
     if (this_ack_to_packno >= vegas->right_boundary_of_this_RTT) //应该进行检测了，进行Vegas算法参数更新
     {
         vegas->right_boundary_of_this_RTT = vegas->last_packno + 1;
@@ -183,7 +183,8 @@ lsquic_vegas_ack (void *cong_ctl, struct lsquic_packet_out *packet_out,
                   //进行Reno
                   if (in_slow_start(vegas))
                   {
-                        vegas->cwnd += ack_p_num*TCP_MSS;
+                    //    vegas->cwnd += ack_p_num*TCP_MSS;
+                    vegas->cwnd += packet_out->po_data_sz;
                   }
                   else
                   {
@@ -204,7 +205,8 @@ lsquic_vegas_ack (void *cong_ctl, struct lsquic_packet_out *packet_out,
                 }
                 else if (in_slow_start(vegas)){
                     // 进行 slow_start
-                        vegas->cwnd +=  ack_p_num*TCP_MSS;
+                       // vegas->cwnd +=  ack_p_num*TCP_MSS;
+                    vegas->cwnd += packet_out->po_data_sz;
                 }
                 else{
                         if(diff > vegas->beta){
@@ -237,7 +239,8 @@ lsquic_vegas_ack (void *cong_ctl, struct lsquic_packet_out *packet_out,
     else if (in_slow_start(vegas)) // 处于两个测量RTT之间 
     {
             //进行slow——start
-            vegas->cwnd += ack_p_num*TCP_MSS;
+            //vegas->cwnd += ack_p_num*TCP_MSS;
+            vegas->cwnd += packet_out->po_data_sz;
     }  
     else{
             vegas->cwnd += TCP_MSS; //CA状态
@@ -287,6 +290,7 @@ lsquic_vegas_timeout (void *cong_ctl)
     vegas->ssthresh = cwnd / 2;
     //vegas->cu_tcp_cwnd = 2 * TCP_MSS;
     vegas->cwnd = 2 * TCP_MSS;
+    vegas->cnt_RTT = 0;
     LSQ_INFO("timeout, cwnd: %lu", vegas->cwnd);
     FILE *f= fopen("/home/sy/test/test.txt","a");
     fprintf(f, "Vegas Time out!!!!!!!!!!\n");
@@ -328,4 +332,5 @@ const struct cong_ctl_if lsquic_cong_vegas_if =
     .cci_timeout       = lsquic_vegas_timeout,
     .cci_was_quiet     = lsquic_vegas_was_quiet,
 };
+
 
